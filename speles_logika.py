@@ -205,26 +205,24 @@ class Game:
     def make_move(self, multiplier, player):
         new_number = self.current_number * multiplier
 
-        # ⚠️ LABOTS: Vispirms aprēķinām bankas punktu un pieskaitām
         bank_points = 1 if new_number % 10 in [0, 5] else 0
         self.bank += bank_points
 
-        # Tad aprēķinām punktu spēlētājam
         points = 1 if new_number % 2 else -1
         if player:
             self.player_score += points
         else:
             self.computer_score += points
 
-        # Ja spēle beidzas, pievienojam visu banku
-        if new_number >= TARGET:
+        self.current_number = new_number
+
+        if self.current_number >= TARGET:
             if player:
                 self.player_score += self.bank
             else:
                 self.computer_score += self.bank
             self.bank = 0
 
-        self.current_number = new_number
         self.update_status()
 
     def update_status(self):
@@ -289,9 +287,21 @@ class Game:
 
     def end_game(self):
         self.disable_buttons()
+
+        if self.player_score > self.computer_score:
+            winner_text = "Uzvarētājs: Cilvēks 🎉"
+        elif self.computer_score > self.player_score:
+            winner_text = "Uzvarētājs: Dators 🤖"
+        else:
+            winner_text = "Neizšķirts 🤝"
+
         self.status_label.configure(
-            text=f"Spēle beigusies!\nRezultāts: Cilvēks {self.player_score} - {self.computer_score} Dators\nBanka: {self.bank}"
+            text=f"Spēle beigusies!\n"
+                f"Rezultāts: Cilvēks {self.player_score} - {self.computer_score} Dators\n"
+                f"Banka: {self.bank}\n\n"
+                f"{winner_text}"
         )
+
         self.computer_msg.configure(text="")
         self.restart_button.configure(state="normal")
 
