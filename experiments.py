@@ -30,20 +30,26 @@ class GameState:
             player_pts = self.player_score
             comp_pts = self.computer_score
             bank_val = self.bank
+
             score_change = 1 if new_number % 2 else -1
             bank_bonus = 1 if new_number % 10 in [0, 5] else 0
+
             if self.is_player_turn:
                 player_pts += score_change
             else:
                 comp_pts += score_change
+
             bank_val += bank_bonus
+
             if new_number >= TARGET:
                 if self.is_player_turn:
                     player_pts += bank_val
                 else:
                     comp_pts += bank_val
                 bank_val = 0
+
             next_turn = self.is_player_turn if new_number >= TARGET else not self.is_player_turn
+
             child = GameState(
                 current_number=new_number,
                 player_score=player_pts,
@@ -124,11 +130,11 @@ class Experiment:
 
         for i in range(10):
             current = random.randint(8, 18)
-            print(f"Game {i+1} starts with number: {current}")
+            print(f"\n{i+1}. spēle sākas ar skaitli: {current}")
             player_score = 0
             computer_score = 0
             bank = 0
-            turn = False  # Computer starts
+            turn = False  # DATORS sāk
 
             while current < TARGET:
                 state = GameState(current, player_score, computer_score, bank, turn)
@@ -144,48 +150,46 @@ class Experiment:
                 move_time = end - start
                 times.append(move_time)
                 all_nodes.append(self.nodes_visited)
-                print(f"Game {i+1}, Move took: {move_time:.6f}s, Nodes visited: {self.nodes_visited}")
+                print(f"  Dators izvēlas x{move}, ilgums: {move_time:.6f}s, apmeklētās virsotnes: {self.nodes_visited}")
 
                 current *= move
+                bank_points = 1 if current % 10 in [0, 5] else 0
                 score_change = 1 if current % 2 else -1
-                bank_bonus = 1 if current % 10 in [0, 5] else 0
 
                 if turn:
                     player_score += score_change
                 else:
                     computer_score += score_change
-                bank += bank_bonus
+                bank += bank_points
 
                 if current >= TARGET:
                     if turn:
                         player_score += bank
                     else:
                         computer_score += bank
+                    bank = 0
                     break
 
                 turn = not turn
 
             if player_score > computer_score:
-                results.append("Player")
+                results.append("Cilvēks")
             elif computer_score > player_score:
-                results.append("Computer")
+                results.append("Dators")
             else:
-                results.append("Tie")
+                results.append("Neizšķirts")
 
-        player_wins = results.count("Player")
-        computer_wins = results.count("Computer")
-        ties = results.count("Tie")
-
-        print("\n--- Summary for", algorithm_name, "---")
-        print("Computer wins:", computer_wins)
-        print("Player wins:", player_wins)
-        print("Ties:", ties)
-        print(f"Average nodes visited: {statistics.mean(all_nodes):.2f}")
-        print(f"Average time per move: {statistics.mean(times):.6f} seconds")
+        print(f"\n--- Kopsavilkums ({algorithm_name}) ---")
+        print("Datora uzvaras:", results.count("Dators"))
+        print("Cilvēka uzvaras:", results.count("Cilvēks"))
+        print("Neizšķirti:", results.count("Neizšķirts"))
+        print(f"Vidēji apmeklētās virsotnes: {statistics.mean(all_nodes):.2f}")
+        print(f"Vidējais gājiena ilgums: {statistics.mean(times):.6f} sekundes")
 
 if __name__ == "__main__":
     exp = Experiment()
-    print("\nRunning Minimax experiments:")
+    print("Notiek Minimax algoritma eksperimenti:")
     exp.run_experiments("minimax")
-    print("\nRunning Alpha-Beta experiments:")
+
+    print("\nNotiek Alpha-Beta algoritma eksperimenti:")
     exp.run_experiments("alpha-beta")
