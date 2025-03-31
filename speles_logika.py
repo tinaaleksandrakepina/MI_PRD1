@@ -1,5 +1,5 @@
-import tkinter as tk
-from tkinter import messagebox
+import customtkinter as ctk
+import tkinter.messagebox as messagebox
 import time
 from dataclasses import dataclass, field
 from typing import List, Optional
@@ -13,7 +13,7 @@ class GameState:
     player_score: int
     computer_score: int
     bank: int
-    is_player_turn: bool  # True = Human, False = Computer
+    is_player_turn: bool
     move: Optional[int] = None
     parent: Optional["GameState"] = None
     children: List["GameState"] = field(default_factory=list)
@@ -25,7 +25,6 @@ class GameState:
     def generate_children(self):
         if self.is_terminal():
             return
-
         for factor in MULTIPLIERS:
             new_number = self.current_number * factor
             player_pts = self.player_score
@@ -61,15 +60,16 @@ class GameState:
                 parent=self,
                 depth=self.depth + 1
             )
-
             self.children.append(child)
 
 class Game:
     def __init__(self, root):
         self.root = root
-        self.root.title("AI Game: Minimax vs Alpha-Beta")
+        self.root.title("Mākslīgā intelekta spēle")
+        self.root.geometry("700x750")
+        ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("green")
 
-        self.setup_ui()
         self.algorithm = None
         self.current_number = None
         self.player_score = 0
@@ -77,40 +77,57 @@ class Game:
         self.bank = 0
         self.player_turn = True
 
+        self.setup_ui()
+
     def setup_ui(self):
-        tk.Label(self.root, text="Select who starts:").pack()
-        self.turn_var = tk.StringVar(value="human")
-        tk.Radiobutton(self.root, text="Human", variable=self.turn_var, value="human").pack()
-        tk.Radiobutton(self.root, text="Computer", variable=self.turn_var, value="computer").pack()
+        self.main_frame = ctk.CTkFrame(self.root)
+        self.main_frame.pack(pady=20, padx=20, fill="both", expand=True)
 
-        tk.Label(self.root, text="Select algorithm:").pack()
-        self.algo_var = tk.StringVar(value="minimax")
-        tk.Radiobutton(self.root, text="Minimax", variable=self.algo_var, value="minimax").pack()
-        tk.Radiobutton(self.root, text="Alpha-Beta", variable=self.algo_var, value="alpha-beta").pack()
+        self.turn_var = ctk.StringVar(value="CILVĒKS")
+        self.algo_var = ctk.StringVar(value="minimax")
 
-        tk.Label(self.root, text="Enter seed number (8-18):").pack()
-        self.entry = tk.Entry(self.root)
-        self.entry.pack()
+        ctk.CTkLabel(self.main_frame, text="Izvēlies, kurš sāk:").pack(pady=5)
+        ctk.CTkSegmentedButton(self.main_frame, values=["CILVĒKS", "DATORS"], variable=self.turn_var).pack(pady=5)
 
-        self.start_button = tk.Button(self.root, text="Start game", command=self.start_game, fg="black")
-        self.start_button.pack()
+        ctk.CTkLabel(self.main_frame, text="Izvēlies algoritmu:").pack(pady=5)
+        ctk.CTkSegmentedButton(self.main_frame, values=["minimax", "alpha-beta"], variable=self.algo_var).pack(pady=5)
 
-        self.status_label = tk.Label(self.root, text="")
-        self.status_label.pack()
+        ctk.CTkLabel(self.main_frame, text="Ievadi sākuma skaitli (8–18):").pack(pady=5)
+        self.entry = ctk.CTkEntry(self.main_frame)
+        self.entry.pack(pady=5)
 
-        self.computer_msg = tk.Label(self.root, text="")
+        self.start_button = ctk.CTkButton(self.main_frame, text="Sākt spēli", command=self.start_game)
+        self.start_button.pack(pady=5)
+
+        rules_text = (
+            "\nSpēles noteikumi:\n"
+            "- Spēles sākumā cilvēks ievada sākuma skaitli no 8 līdz 18.\n"
+            "- Katram spēlētājam ir 0 punkti un bankā ir 0.\n"
+            "- Katrs gājiens reizinās skaitli ar 2, 3 vai 4.\n"
+            "- Ja rezultāts ir pāra skaitlis: -1 punkts.\n"
+            "- Ja rezultāts ir nepāra skaitlis: +1 punkts.\n"
+            "- Ja rezultāts beidzas ar 0 vai 5: bankai +1 punkts.\n"
+            "- Spēle beidzas, kad skaitlis sasniedz vai pārsniedz 1200.\n"
+            "- Pēdējais spēlētājs iegūst visus bankas punktus.\n"
+            "- Uzvar tas, kam vairāk punktu. Ja vienādi – neizšķirts."
+        )
+        ctk.CTkLabel(self.main_frame, text=rules_text, justify="left", font=("Arial", 12), text_color="lightgrey", wraplength=650).pack(pady=10)
+
+        self.status_label = ctk.CTkLabel(self.main_frame, text="", font=("Arial", 16))
+        self.status_label.pack(pady=10)
+
+        self.computer_msg = ctk.CTkLabel(self.main_frame, text="")
         self.computer_msg.pack()
 
         self.move_buttons = []
         for m in MULTIPLIERS:
-            btn = tk.Button(self.root, text=f"x{m}", command=lambda m=m: self.player_move(m), fg="black")
-            btn.pack()
-            btn.config(state=tk.DISABLED)
+            btn = ctk.CTkButton(self.main_frame, text=f"x{m}", command=lambda m=m: self.player_move(m))
+            btn.pack(pady=2)
+            btn.configure(state="disabled")
             self.move_buttons.append(btn)
 
-        self.restart_button = tk.Button(self.root, text="Restart Game", command=self.restart_game, fg="black")
-        self.restart_button.pack()
-        self.restart_button.config(state=tk.DISABLED)
+        self.restart_button = ctk.CTkButton(self.main_frame, text="Restartēt spēli", command=self.restart_game, state="disabled")
+        self.restart_button.pack(pady=10)
 
     def start_game(self):
         try:
@@ -118,16 +135,16 @@ class Game:
             if num < 8 or num > 18:
                 raise ValueError
         except ValueError:
-            messagebox.showerror("error", "Enter a number between 8 and 18")
+            messagebox.showerror("Kļūda", "Ievadi skaitli no 8 līdz 18")
             return
 
         self.current_number = num
         self.algorithm = self.algo_var.get()
-        self.player_turn = (self.turn_var.get() == "human")
-        self.entry.config(state=tk.DISABLED)
-        self.start_button.config(state=tk.DISABLED)
+        self.player_turn = (self.turn_var.get() == "CILVĒKS")
+        self.entry.configure(state="disabled")
+        self.start_button.configure(state="disabled")
         self.update_status()
-        self.computer_msg.config(text="")
+        self.computer_msg.configure(text="")
 
         if self.player_turn:
             self.enable_buttons()
@@ -137,18 +154,17 @@ class Game:
 
     def enable_buttons(self):
         for btn in self.move_buttons:
-            btn.config(state=tk.NORMAL)
+            btn.configure(state="normal")
 
     def disable_buttons(self):
         for btn in self.move_buttons:
-            btn.config(state=tk.DISABLED)
+            btn.configure(state="disabled")
 
     def player_move(self, multiplier):
         if not self.player_turn:
             return
-
         self.make_move(multiplier, player=True)
-        self.computer_msg.config(text="")
+        self.computer_msg.configure(text="")
 
         if self.current_number >= TARGET:
             self.end_game()
@@ -159,9 +175,9 @@ class Game:
         self.root.after(1000, self.computer_move)
 
     def computer_move(self):
-        self.computer_msg.config(text="Computer is thinking...")
+        self.computer_msg.configure(text="Dators domā...")
         self.root.update()
-        time.sleep(1)  # <-- Pause for 1 second
+        time.sleep(1)
 
         state = GameState(
             current_number=self.current_number,
@@ -177,7 +193,7 @@ class Game:
             best_move = self.alpha_beta(state, True, 3, float("-inf"), float("inf"))[1]
 
         self.make_move(best_move, player=False)
-        self.computer_msg.config(text=f"Computer chose x{best_move}")
+        self.computer_msg.configure(text=f"Dators izvēlējās x{best_move}")
 
         if self.current_number >= TARGET:
             self.end_game()
@@ -187,21 +203,33 @@ class Game:
         self.enable_buttons()
 
     def make_move(self, multiplier, player):
-        self.current_number *= multiplier
-        points = 1 if self.current_number % 2 else -1
-        bank_points = 1 if self.current_number % 10 in [0, 5] else 0
+        new_number = self.current_number * multiplier
 
+        # ⚠️ LABOTS: Vispirms aprēķinām bankas punktu un pieskaitām
+        bank_points = 1 if new_number % 10 in [0, 5] else 0
+        self.bank += bank_points
+
+        # Tad aprēķinām punktu spēlētājam
+        points = 1 if new_number % 2 else -1
         if player:
             self.player_score += points
         else:
             self.computer_score += points
 
-        self.bank += bank_points
+        # Ja spēle beidzas, pievienojam visu banku
+        if new_number >= TARGET:
+            if player:
+                self.player_score += self.bank
+            else:
+                self.computer_score += self.bank
+            self.bank = 0
+
+        self.current_number = new_number
         self.update_status()
 
     def update_status(self):
-        self.status_label.config(
-            text=f"Number: {self.current_number}\nPlayer: {self.player_score}, Computer: {self.computer_score}\nBank: {self.bank}"
+        self.status_label.configure(
+            text=f"Skaitlis: {self.current_number}\nCilvēks: {self.player_score}, Dators: {self.computer_score}\nBanka: {self.bank}"
         )
 
     def evaluate_state(self, state: GameState):
@@ -212,10 +240,8 @@ class Game:
     def minimax(self, state: GameState, maximizing: bool, depth: int):
         if state.is_terminal() or depth == 0:
             return self.evaluate_state(state), None
-
         state.generate_children()
         best_move = None
-
         if maximizing:
             max_eval = float("-inf")
             for child in state.children:
@@ -236,10 +262,8 @@ class Game:
     def alpha_beta(self, state: GameState, maximizing: bool, depth: int, alpha: float, beta: float):
         if state.is_terminal() or depth == 0:
             return self.evaluate_state(state), None
-
         state.generate_children()
         best_move = None
-
         if maximizing:
             max_eval = float("-inf")
             for child in state.children:
@@ -264,35 +288,28 @@ class Game:
             return min_eval, best_move
 
     def end_game(self):
-        if self.player_turn:
-            self.player_score += self.bank
-        else:
-            self.computer_score += self.bank
-
         self.disable_buttons()
-        self.status_label.config(
-            text=f"Game Over!\nFinal Score: Player {self.player_score} - {self.computer_score} Computer\nBank: {self.bank}"
+        self.status_label.configure(
+            text=f"Spēle beigusies!\nRezultāts: Cilvēks {self.player_score} - {self.computer_score} Dators\nBanka: {self.bank}"
         )
-        self.computer_msg.config(text="")
-        self.restart_button.config(state=tk.NORMAL)
+        self.computer_msg.configure(text="")
+        self.restart_button.configure(state="normal")
 
     def restart_game(self):
         self.player_score = 0
         self.computer_score = 0
         self.bank = 0
         self.current_number = None
-        self.status_label.config(text="")
-        self.computer_msg.config(text="")
-
-        self.entry.config(state=tk.NORMAL)
-        self.start_button.config(state=tk.NORMAL)
-        self.restart_button.config(state=tk.DISABLED)
-
+        self.status_label.configure(text="")
+        self.computer_msg.configure(text="")
+        self.entry.configure(state="normal")
+        self.start_button.configure(state="normal")
+        self.restart_button.configure(state="disabled")
         self.enable_buttons()
         for btn in self.move_buttons:
-            btn.config(state=tk.DISABLED)
+            btn.configure(state="disabled")
 
 if __name__ == "__main__":
-    root = tk.Tk()
+    root = ctk.CTk()
     game = Game(root)
     root.mainloop()
