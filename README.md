@@ -1,5 +1,5 @@
 # MI_PRD1
-Two-player search-based game using Minimax and Alpha-Beta
+
 # Reizināšanas spēle
 
 **26. grupa, PR1**
