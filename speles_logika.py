@@ -34,12 +34,11 @@ class GameState:
             score_change = 1 if new_number % 2 else -1
             bank_bonus = 1 if new_number % 10 in [0, 5] else 0
 
+            bank_val += bank_bonus
             if self.is_player_turn:
                 player_pts += score_change
             else:
                 comp_pts += score_change
-
-            bank_val += bank_bonus
 
             if new_number >= TARGET:
                 if self.is_player_turn:
@@ -62,6 +61,23 @@ class GameState:
             )
             self.children.append(child)
 
+@dataclass
+class GameStats:
+    total_moves: int = 0
+    total_time: float = 0.0
+    total_nodes: int = 0
+
+    def add(self, move_time, visited_nodes):
+        self.total_moves += 1
+        self.total_time += move_time
+        self.total_nodes += visited_nodes
+
+    def get_average_time(self):
+        return self.total_time / self.total_moves if self.total_moves > 0 else 0
+
+    def get_average_nodes(self):
+        return self.total_nodes / self.total_moves if self.total_moves > 0 else 0
+
 class Game:
     def __init__(self, root):
         self.root = root
@@ -76,6 +92,8 @@ class Game:
         self.computer_score = 0
         self.bank = 0
         self.player_turn = True
+        self.stats = GameStats()
+        self.nodes_visited = 0
 
         self.setup_ui()
 
@@ -101,15 +119,12 @@ class Game:
 
         rules_text = (
             "\nSpēles noteikumi:\n"
-            "- Spēles sākumā cilvēks ievada sākuma skaitli no 8 līdz 18.\n"
-            "- Katram spēlētājam ir 0 punkti un bankā ir 0.\n"
-            "- Katrs gājiens reizinās skaitli ar 2, 3 vai 4.\n"
-            "- Ja rezultāts ir pāra skaitlis: -1 punkts.\n"
-            "- Ja rezultāts ir nepāra skaitlis: +1 punkts.\n"
-            "- Ja rezultāts beidzas ar 0 vai 5: bankai +1 punkts.\n"
-            "- Spēle beidzas, kad skaitlis sasniedz vai pārsniedz 1200.\n"
-            "- Pēdējais spēlētājs iegūst visus bankas punktus.\n"
-            "- Uzvar tas, kam vairāk punktu. Ja vienādi – neizšķirts."
+            "- Sākuma skaitlis no 8 līdz 18.\n"
+            "- Katrs spēlētājs sāk ar 0 punktiem.\n"
+            "- Katrs gājiens reizināts ar 2, 3 vai 4.\n"
+            "- Pāra skaitļi: -1 punkts, nepāra: +1 punkts.\n"
+            "- Skaitļi ar 0 vai 5 beigās -> +1 punktu bankai.\n"
+            "- Kad sasniedz 1200 vai vairāk: spēle beidzas, un banka piešķirta pēdējam spēlētājam."
         )
         ctk.CTkLabel(self.main_frame, text=rules_text, justify="left", font=("Arial", 12), text_color="lightgrey", wraplength=650).pack(pady=10)
 
@@ -145,6 +160,7 @@ class Game:
         self.start_button.configure(state="disabled")
         self.update_status()
         self.computer_msg.configure(text="")
+        self.stats = GameStats()
 
         if self.player_turn:
             self.enable_buttons()
@@ -177,7 +193,7 @@ class Game:
     def computer_move(self):
         self.computer_msg.configure(text="Dators domā...")
         self.root.update()
-        time.sleep(1)
+        time.sleep(0.5)
 
         state = GameState(
             current_number=self.current_number,
@@ -187,13 +203,19 @@ class Game:
             is_player_turn=False
         )
 
-        if self.algorithm == "minimax":
-            best_move = self.minimax(state, True, 3)[1]
-        else:
-            best_move = self.alpha_beta(state, True, 3, float("-inf"), float("inf"))[1]
+        self.nodes_visited = 0
+        start = time.perf_counter()
 
-        self.make_move(best_move, player=False)
-        self.computer_msg.configure(text=f"Dators izvēlējās x{best_move}")
+        if self.algorithm == "minimax":
+            move = self.minimax(state, True, 3)[1]
+        else:
+            move = self.alpha_beta(state, True, 3, float("-inf"), float("inf"))[1]
+
+        duration = time.perf_counter() - start
+        self.stats.add(duration, self.nodes_visited)
+
+        self.make_move(move, player=False)
+        self.computer_msg.configure(text=f"Dators izvēlējās x{move}")
 
         if self.current_number >= TARGET:
             self.end_game()
@@ -204,9 +226,8 @@ class Game:
 
     def make_move(self, multiplier, player):
         new_number = self.current_number * multiplier
-
-        bank_points = 1 if new_number % 10 in [0, 5] else 0
-        self.bank += bank_points
+        bank_bonus = 1 if new_number % 10 in [0, 5] else 0
+        self.bank += bank_bonus
 
         points = 1 if new_number % 2 else -1
         if player:
@@ -214,15 +235,14 @@ class Game:
         else:
             self.computer_score += points
 
-        self.current_number = new_number
-
-        if self.current_number >= TARGET:
+        if new_number >= TARGET:
             if player:
                 self.player_score += self.bank
             else:
                 self.computer_score += self.bank
             self.bank = 0
 
+        self.current_number = new_number
         self.update_status()
 
     def update_status(self):
@@ -231,11 +251,10 @@ class Game:
         )
 
     def evaluate_state(self, state: GameState):
-        score_diff = state.computer_score - state.player_score
-        closeness = state.current_number / TARGET
-        return score_diff + closeness
+        return state.computer_score - state.player_score + state.current_number / TARGET
 
     def minimax(self, state: GameState, maximizing: bool, depth: int):
+        self.nodes_visited += 1
         if state.is_terminal() or depth == 0:
             return self.evaluate_state(state), None
         state.generate_children()
@@ -258,6 +277,7 @@ class Game:
             return min_eval, best_move
 
     def alpha_beta(self, state: GameState, maximizing: bool, depth: int, alpha: float, beta: float):
+        self.nodes_visited += 1
         if state.is_terminal() or depth == 0:
             return self.evaluate_state(state), None
         state.generate_children()
@@ -287,21 +307,22 @@ class Game:
 
     def end_game(self):
         self.disable_buttons()
-
         if self.player_score > self.computer_score:
-            winner_text = "Uzvarētājs: Cilvēks 🎉"
+            winner = "Uzvarētājs: Cilvēks 🎉"
         elif self.computer_score > self.player_score:
-            winner_text = "Uzvarētājs: Dators 🤖"
+            winner = "Uzvarētājs: Dators 🤖"
         else:
-            winner_text = "Neizšķirts 🤝"
+            winner = "Rezultāts: Neizšķirts 🤝"
 
-        self.status_label.configure(
-            text=f"Spēle beigusies!\n"
-                f"Rezultāts: Cilvēks {self.player_score} - {self.computer_score} Dators\n"
-                f"Banka: {self.bank}\n\n"
-                f"{winner_text}"
+        stats = (
+            f"{winner}\n"
+            f"Spēle beigusies!\n"
+            f"Rezultāts: Cilvēks {self.player_score} - {self.computer_score} Dators\n"
+            f"Vid. gājiena laiks: {self.stats.get_average_time():.6f} sek\n"
+            f"Vid. virsotņu skaits: {self.stats.get_average_nodes():.2f}"
         )
 
+        self.status_label.configure(text=stats)
         self.computer_msg.configure(text="")
         self.restart_button.configure(state="normal")
 
@@ -310,6 +331,7 @@ class Game:
         self.computer_score = 0
         self.bank = 0
         self.current_number = None
+        self.stats = GameStats()
         self.status_label.configure(text="")
         self.computer_msg.configure(text="")
         self.entry.configure(state="normal")
