@@ -41,7 +41,7 @@ Lai palaistu spēli, nepieciešams Python 3.
 
 ```bash
 pip install customtkinter
-
+```
 
 Ekrānā būs iespēja:
 - izvēlēties spēles sākuma skaitli (no 8 līdz 18),
