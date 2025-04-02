@@ -34,13 +34,19 @@ speles_logika.py        # Spēles loģika, GUI, AI algoritmi, heiristika un note
 
 ## Lietošana
 
-Lai palaistu spēli, nepieciešams Python 3.
+Lai palaistu spēli, pārliecinieties, ka Python 3 ir uzstādīts (to var pārbaudīt ar komandu `python --version` vai `python3 --version`).
+
 
 1. Pārliecinieties, ka esat projektā ar failu `speles_logika.py`.
 2. Ja izmantojat Codespace vai citu jaunu vidi, pirms spēles palaišanas uzstādiet nepieciešamo bibliotēku:
 
 ```bash
 pip install customtkinter
+```
+3. Pēc tam palaidiet spēli ar komandu:
+
+```bash
+python speles_logika.py
 ```
 
 Ekrānā būs iespēja:
