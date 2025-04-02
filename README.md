@@ -35,6 +35,16 @@ speles_logika.py        # Spēles loģika, GUI, AI algoritmi, heiristika un note
 ## Lietošana
 
 Lai palaistu spēli, pārliecinieties, ka Python 3 ir uzstādīts (to var pārbaudīt ar komandu `python --version` vai `python3 --version`).
+---
+
+### ⚠️ Piezīme par GitHub Codespaces
+
+Šī programma izmanto `customtkinter`, kas veido grafisku logu. **GitHub Codespaces neatbalsta grafiskās lietotāja saskarnes (GUI)**, tāpēc spēli **nav iespējams palaist Codespaces vidē**.
+
+Lai spēli palaistu pareizi, tā jāizpilda **lokāli uz datora**, kur ir pieejams grafiskais ekrāns (Windows, Mac, vai Linux ar GUI).
+
+Ja tomēr mēģināsiet palaist Codespaces vidē, saņemsiet kļūdu:
+_tkinter.TclError: no display name and no $DISPLAY environment variable
 
 
 1. Pārliecinieties, ka esat projektā ar failu `speles_logika.py`.
